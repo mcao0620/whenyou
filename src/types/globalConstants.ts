@@ -3,7 +3,7 @@
 export const STRING_SIMILARITY_CONST = 0.5;
 
 // maximum group size currently supported.
-export const MAX_GROUP_SIZE = 12;
+export const MAX_GROUP_SIZE = 20;
 
 // length of uniquely generated group ID
 export const GROUP_ID_LENGTH = 6;
