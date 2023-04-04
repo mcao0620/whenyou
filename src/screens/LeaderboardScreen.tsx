@@ -14,8 +14,7 @@ import {
   useCurrentUserInfo,
 } from '../store/store';
 import firestore from '@react-native-firebase/firestore';
-import {GameSettings, GameState} from '../types/gameSettings';
-import {getDailyTimeSeconds} from './HomeScreen';
+import {GameState} from '../types/gameSettings';
 
 const calculateRankings = (data: any, rankings: number[]) => {
   // let currRank = 1;
