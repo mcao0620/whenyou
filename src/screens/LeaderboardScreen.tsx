@@ -16,21 +16,23 @@ import {
 import firestore from '@react-native-firebase/firestore';
 import {GameState} from '../types/gameSettings';
 
+// uses leaderboard data to calculate rankings for each user
 const calculateRankings = (data: any, rankings: number[]) => {
-  let currRank = 1;
   for (let i = 1; i <= data.length; i++) {
     if (
       data[i] &&
       data[i - 1] &&
-      (data[i].numGamesWon !== data[i - 1].numGamesWon ||
-        data[i].totalPoints !== data[i - 1].totalPoints)
+      data[i].numGamesWon === data[i - 1].numGamesWon &&
+      data[i].totalPoints === data[i - 1].totalPoints
     ) {
-      currRank++;
+      rankings[i] = rankings[i - 1];
+    } else {
+      rankings[i] = i + 1;
     }
-    rankings[i] = currRank;
   }
 };
 
+// header that displays user rank, profile pic, and total points
 const LeaderboardHeader = ({sortedData, user}: any) => {
   const rankings = Array(sortedData.length).fill(1);
   calculateRankings(sortedData, rankings);
@@ -84,6 +86,7 @@ const LeaderboardHeader = ({sortedData, user}: any) => {
   );
 };
 
+// displays group leaderboard data
 const GroupStats = ({sortedData, user, refreshing, loadDataFunction}: any) => {
   const rankings = Array(sortedData.length).fill(1);
   calculateRankings(sortedData, rankings);
@@ -142,6 +145,7 @@ const GroupStats = ({sortedData, user, refreshing, loadDataFunction}: any) => {
   );
 };
 
+// displays full leaderboard (header + group data) and performs necessary fetching
 const Leaderboard = ({currentGroupInfo, currentUserInfo}: any) => {
   interface UserLeaderboardInfo {
     uid: string;
@@ -190,11 +194,16 @@ const Leaderboard = ({currentGroupInfo, currentUserInfo}: any) => {
     };
 
     // from submission data, gets a list of all dates to consider in leaderboard
-    const getDatesFromSubmissions = (submissionData: any) => {
-      const dates = submissionData.data()?.dates;
+    const getDatesFromSubmissions = (
+      submissionData: any,
+      startIdx: number = 0,
+    ) => {
+      let dates = submissionData.data()?.dates;
       if (!dates || dates.length === 0) {
         return [];
       }
+
+      dates = dates.slice(startIdx);
       if (currentGameState !== GameState.result) {
         // game still in progress, do not include submissions from today
         const today = new Date();
@@ -239,57 +248,151 @@ const Leaderboard = ({currentGroupInfo, currentUserInfo}: any) => {
         .reverse();
     };
 
+    // fetch submission data (votes/winner) for a specified set of users and dates
+    const getDataInRange = async (
+      groupRef: any,
+      users: string[],
+      dates: string[],
+    ) => {
+      const overallStats = new Map<string, UserStats>(
+        users.map((uid: string) => [
+          uid,
+          {
+            totalPoints: 0,
+            numGamesWon: 0,
+          },
+        ]),
+      );
+      for (let i = 0; i < dates.length; i++) {
+        const dailyStats = new Map<string, number>();
+        for (let u = 0; u < users.length; u++) {
+          const uid = users[u];
+          const doc = await groupRef.collection(dates[i]).doc(uid).get();
+
+          let numVotes = 0;
+          if (doc.exists && doc) {
+            numVotes = doc.data()?.votes.length;
+          }
+          dailyStats.set(uid, numVotes);
+          overallStats.get(uid)!.totalPoints += numVotes;
+        }
+        const dailyWinners = getWinners(dailyStats);
+        for (const winner of dailyWinners) {
+          overallStats.get(winner)!.numGamesWon++;
+        }
+      }
+      return overallStats;
+    };
+
+    // pull cached group stats from backend, fetch relevant new stats, and combine
+    const getCachedStats = async (
+      groupStatsDoc: any,
+      groupStatsData: any,
+      groupRef: any,
+      submissionData: any,
+      currentUsers: string[],
+    ) => {
+      // get cached stats
+      const oldStats = groupStatsData?.data()?.stats;
+      const lastUpdatedIdx = groupStatsData?.data()?.lastUpdatedIdx;
+
+      // get updated stats
+      const datesToFetch = getDatesFromSubmissions(
+        submissionData,
+        lastUpdatedIdx,
+      );
+      const updatedStats = await getDataInRange(
+        groupRef,
+        currentUsers,
+        datesToFetch,
+      );
+
+      // combine old + new stats - keep track of all users that have ever joined the group in the cache, in case they join back
+      for (const user of Object.keys(oldStats)) {
+        if (updatedStats.has(user)) {
+          const combined = {
+            numGamesWon:
+              oldStats[user].numGamesWon + updatedStats.get(user)?.numGamesWon,
+            totalPoints:
+              oldStats[user].totalPoints + updatedStats.get(user)?.totalPoints,
+          };
+          updatedStats.set(user, combined);
+        } else {
+          updatedStats.set(user, oldStats[user]);
+        }
+      }
+
+      // update cache in database
+      await groupStatsDoc.set(
+        {
+          stats: Object.fromEntries(updatedStats),
+          lastUpdatedIdx: lastUpdatedIdx + datesToFetch.length,
+        },
+        {merge: true},
+      );
+
+      // only display data for current users
+      return new Map(
+        [...updatedStats].filter(userData =>
+          currentUsers.includes(userData[0]),
+        ),
+      );
+    };
+
+    // fetch all submission data, from cache if present
     const fetchData = async () => {
       if (
         currentGroupInfo &&
         currentGroupInfo.gid !== '' &&
         currentGroupInfo.users
       ) {
+        // fetch submission data object
         const groupRef = firestore()
           .collection('Submissions-Group')
           .doc(currentGroupInfo?.gid);
         const submissionData = await groupRef.get();
+        const currentUsers = currentGroupInfo?.users;
 
-        const users = currentGroupInfo?.users;
-        const overallStats = new Map<string, UserStats>(
-          users.map((uid: string) => [
-            uid,
+        // fetch group stats cache (if if exists)
+        const groupStatsDoc = firestore()
+          .collection('Group-Stats')
+          .doc(currentGroupInfo?.gid);
+        const groupStatsData = await groupStatsDoc.get();
+
+        let overallStats = new Map<string, UserStats>();
+        if (groupStatsData.exists) {
+          // cache exists, fetch new data and combine with existing
+          overallStats = await getCachedStats(
+            groupStatsDoc,
+            groupStatsData,
+            groupRef,
+            submissionData,
+            currentUsers,
+          );
+        } else {
+          // no cache exists, fetch all data and store in cache
+          const allDates = getDatesFromSubmissions(submissionData);
+          overallStats = await getDataInRange(groupRef, currentUsers, allDates);
+          await groupStatsDoc.set(
             {
-              totalPoints: 0,
-              numGamesWon: 0,
+              stats: Object.fromEntries(overallStats),
+              lastUpdatedIdx: allDates.length,
             },
-          ]),
-        );
-
-        if (submissionData) {
-          const dates = getDatesFromSubmissions(submissionData);
-          for (let i = 0; i < dates.length; i++) {
-            const dailyStats = new Map<string, number>();
-            for (let u = 0; u < users.length; u++) {
-              const uid = users[u];
-              const doc = await groupRef.collection(dates[i]).doc(uid).get();
-
-              let numVotes = 0;
-              if (doc.exists && doc) {
-                numVotes = doc.data()?.votes.length;
-              }
-              dailyStats.set(uid, numVotes);
-              overallStats.get(uid)!.totalPoints += numVotes;
-            }
-            const dailyWinners = getWinners(dailyStats);
-            for (const winner of dailyWinners) {
-              overallStats.get(winner)!.numGamesWon++;
-            }
-          }
+            {merge: true},
+          );
         }
+
         if (overallStats && overallStats.size > 0) {
           setLeaderboardStats(formatData(overallStats));
         } else {
+          // check needed in case user leaves a group
           setLeaderboardStats(initialLeaderboard);
         }
+
         setRefreshing(false);
       }
     };
+
     fetchData().catch(console.error);
     setShowLoading(false);
   }, [
