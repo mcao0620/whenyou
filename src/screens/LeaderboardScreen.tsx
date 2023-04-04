@@ -16,7 +16,6 @@ import {
 import firestore from '@react-native-firebase/firestore';
 import {GameState} from '../types/gameSettings';
 
-
 // uses leaderboard data to calculate rankings for each user
 const calculateRankings = (data: any, rankings: number[]) => {
   for (let i = 1; i <= data.length; i++) {
