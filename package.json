@@ -9,7 +9,7 @@
     "start": "react-native start",
     "test": "jest",
     "format": "prettier --write \"src/**/*.{js,jsx,ts,tsx}\" && prettier --write \"*.{js,jsx,ts,tsx}\"",
-    "prepare": "cd .. && husky install WhenYou/.husky"
+    "prepare": "husky install"
   },
   "dependencies": {
     "@bam.tech/react-native-image-resizer": "^3.0.5",
