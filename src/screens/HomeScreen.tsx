@@ -9,7 +9,6 @@ import {
   useCurrentGroupObjects,
   useSetCurrentGroupObjects,
   useSetCurrentGameState,
-  useNotificationsEnabled,
   useSetNotificationsEnabled,
 } from '../store/store';
 import {
@@ -89,7 +88,6 @@ const HomeScreen = () => {
       authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
       authStatus === messaging.AuthorizationStatus.PROVISIONAL;
 
-    console.log('Authorization status:', authStatus);
     setNotificationsEnabled(enabled);
   }, [setNotificationsEnabled]);
 

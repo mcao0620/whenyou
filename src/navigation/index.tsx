@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useEffect, useState} from 'react';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {createBottomTabNavigator} from '@react-navigation/bottom-tabs';
 import Ionicon from 'react-native-vector-icons/Ionicons';
@@ -6,7 +6,6 @@ import CreateAccountScreen from '../screens/login/CreateAccountScreen';
 import StartScreen from '../screens/login/StartScreen';
 import HomeScreen from '../screens/HomeScreen';
 import FindGroupScreen from '../screens/groups/FindGroupScreen';
-import MyGroupScreen from '../screens/groups/MyGroupScreen';
 import ProfileScreen from '../screens/ProfileScreen';
 import CreateGroupScreen from '../screens/groups/CreateGroupScreen';
 import LeaderboardScreen from '../screens/LeaderboardScreen';
@@ -14,8 +13,14 @@ import JoinGroupScreen from '../screens/groups/JoinGroupScreen';
 import EnterPhoneScreen from '../screens/login/EnterPhoneScreen';
 import VerifyPhoneScreen from '../screens/login/VerifyPhoneScreen';
 import GroupScreen from '../screens/groups/GroupScreen';
-import {useAuthCurrentUser, useCurrentUserInfo} from '../store/store';
+import {
+  useAuthCurrentUser,
+  useCurrentUserInfo,
+  useSetNotificationsEnabled,
+} from '../store/store';
 import HeaderTimer from '../components/headerTimer';
+import {useNavigation} from '@react-navigation/native';
+import messaging from '@react-native-firebase/messaging';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -102,8 +107,46 @@ const TabNavigator = () => {
 
 const RootNavigator = () => {
   const authCurentUser = useAuthCurrentUser();
+  const setNotificationsEnabled = useSetNotificationsEnabled();
+  const navigation = useNavigation<any>();
+  const [loading, setLoading] = useState(true);
+  const [initialRoute, setInitialRoute] = useState('Home');
+
+  useEffect(() => {
+    const handleNotifications = async () => {
+      const authStatus = await messaging().hasPermission();
+      const enabled =
+        authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+        authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+      setNotificationsEnabled(enabled);
+
+      if (!enabled) {
+        return;
+      }
+
+      messaging().onNotificationOpenedApp(remoteMessage => {
+        navigation.navigate(remoteMessage?.data?.type || 'Home');
+      });
+
+      messaging()
+        .getInitialNotification()
+        .then(remoteMessage => {
+          if (remoteMessage) {
+            setInitialRoute(remoteMessage?.data?.type || 'Home'); // e.g. "Settings"
+          }
+          setLoading(false);
+        });
+
+      if (loading) {
+        return null;
+      }
+    };
+
+    handleNotifications();
+  });
+
   return (
-    <Stack.Navigator>
+    <Stack.Navigator initialRouteName={initialRoute}>
       {!authCurentUser ? (
         <>
           <Stack.Screen
@@ -157,12 +200,6 @@ const RootNavigator = () => {
             component={CreateGroupScreen}
             options={{title: 'Create a Group'}}
           />
-          <Stack.Screen
-            name="MyGroup"
-            component={MyGroupScreen}
-            options={{title: 'My Groups'}}
-          />
-          {/* This screen seeks to replace the above mygroup screen */}
           <Stack.Screen
             name="GroupScreen"
             component={GroupScreen}
