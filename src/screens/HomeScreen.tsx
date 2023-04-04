@@ -1,6 +1,7 @@
-import React, {useEffect} from 'react';
+import React, {useEffect, useCallback} from 'react';
 import {View, TouchableOpacity, Text, ScrollView} from 'react-native';
 import {useNavigation} from '@react-navigation/native';
+import messaging from '@react-native-firebase/messaging';
 import {
   useCurrentUserInfo,
   useAuthCurrentUser,
@@ -8,6 +9,8 @@ import {
   useCurrentGroupObjects,
   useSetCurrentGroupObjects,
   useSetCurrentGameState,
+  useNotificationsEnabled,
+  useSetNotificationsEnabled,
 } from '../store/store';
 import {
   subscribeToCurrentUserInfo,
@@ -46,6 +49,7 @@ const HomeScreen = () => {
   const currentUserInfo = useCurrentUserInfo();
   const setCurrentUserInfo = useSetCurrentUserInfo();
   const setCurrentGameState = useSetCurrentGameState();
+  const setNotificationsEnabled = useSetNotificationsEnabled();
 
   const navigation = useNavigation<any>();
 
@@ -77,7 +81,21 @@ const HomeScreen = () => {
       setCurrentGameState(getGameStateFromDate(new Date()));
     }, GameSettings.UPDATE_FREQUENCY); // check every second
     return () => clearInterval(intervalId);
-  });
+  }, [setCurrentGameState]);
+
+  const requestUserPermission = useCallback(async () => {
+    const authStatus = await messaging().requestPermission();
+    const enabled =
+      authStatus === messaging.AuthorizationStatus.AUTHORIZED ||
+      authStatus === messaging.AuthorizationStatus.PROVISIONAL;
+
+    console.log('Authorization status:', authStatus);
+    setNotificationsEnabled(enabled);
+  }, [setNotificationsEnabled]);
+
+  useEffect(() => {
+    requestUserPermission();
+  }, [requestUserPermission]);
 
   const welcomeText = (
     <Text className="text-lg font-bold text-black">
