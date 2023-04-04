@@ -16,8 +16,9 @@ import {
 import firestore from '@react-native-firebase/firestore';
 import {GameState} from '../types/gameSettings';
 
+
+// uses leaderboard data to calculate rankings for each user
 const calculateRankings = (data: any, rankings: number[]) => {
-  // let currRank = 1;
   for (let i = 1; i <= data.length; i++) {
     if (
       data[i] &&
@@ -32,6 +33,7 @@ const calculateRankings = (data: any, rankings: number[]) => {
   }
 };
 
+// header that displays user rank, profile pic, and total points
 const LeaderboardHeader = ({sortedData, user}: any) => {
   const rankings = Array(sortedData.length).fill(1);
   calculateRankings(sortedData, rankings);
@@ -85,6 +87,7 @@ const LeaderboardHeader = ({sortedData, user}: any) => {
   );
 };
 
+// displays group leaderboard data
 const GroupStats = ({sortedData, user, refreshing, loadDataFunction}: any) => {
   const rankings = Array(sortedData.length).fill(1);
   calculateRankings(sortedData, rankings);
@@ -143,6 +146,7 @@ const GroupStats = ({sortedData, user, refreshing, loadDataFunction}: any) => {
   );
 };
 
+// displays full leaderboard (header + group data) and performs necessary fetching
 const Leaderboard = ({currentGroupInfo, currentUserInfo}: any) => {
   interface UserLeaderboardInfo {
     uid: string;
@@ -245,6 +249,7 @@ const Leaderboard = ({currentGroupInfo, currentUserInfo}: any) => {
         .reverse();
     };
 
+    // fetch submission data (votes/winner) for a specified set of users and dates
     const getDataInRange = async (
       groupRef: any,
       users: string[],
@@ -335,6 +340,7 @@ const Leaderboard = ({currentGroupInfo, currentUserInfo}: any) => {
       );
     };
 
+    // fetch all submission data, from cache if present
     const fetchData = async () => {
       if (
         currentGroupInfo &&
