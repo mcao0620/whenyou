@@ -17,17 +17,18 @@ import firestore from '@react-native-firebase/firestore';
 import {GameState} from '../types/gameSettings';
 
 const calculateRankings = (data: any, rankings: number[]) => {
-  let currRank = 1;
+  // let currRank = 1;
   for (let i = 1; i <= data.length; i++) {
     if (
       data[i] &&
       data[i - 1] &&
-      (data[i].numGamesWon !== data[i - 1].numGamesWon ||
-        data[i].totalPoints !== data[i - 1].totalPoints)
+      (data[i].numGamesWon === data[i - 1].numGamesWon &&
+        data[i].totalPoints === data[i - 1].totalPoints)
     ) {
-      currRank++;
+      rankings[i] = rankings[i - 1];
+    } else {
+      rankings[i] = i + 1;
     }
-    rankings[i] = currRank;
   }
 };
 
