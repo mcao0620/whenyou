@@ -6,6 +6,7 @@ import {getGameStateFromDate} from '../screens/HomeScreen';
 
 type Store = {
   confirmation: FirebaseAuthTypes.ConfirmationResult | null;
+  notificationsEnabled: boolean;
   authCurrentUser: FirebaseAuthTypes.User | null;
   currentUserInfo: User | null;
   currentGroupInfo: Group | null;
@@ -19,6 +20,7 @@ type Store = {
   currentGameState: GameState;
 
   setConfirmation: (val: FirebaseAuthTypes.ConfirmationResult | null) => void;
+  setNotificationsEnabled: (val: boolean) => void;
   setAuthCurrentUser: (val: FirebaseAuthTypes.User | null) => void;
   setCurrentUserInfo: (val: User | null) => void;
   setCurrentGroupInfo: (val: Group | null) => void;
@@ -34,6 +36,7 @@ type Store = {
 
 const useStore = create<Store>(set => ({
   confirmation: null,
+  notificationsEnabled: false,
   authCurrentUser: null,
   currentUserInfo: null,
   currentGroupInfo: {
@@ -63,6 +66,7 @@ const useStore = create<Store>(set => ({
   currentGameState: getGameStateFromDate(new Date()),
 
   setConfirmation: val => set(() => ({confirmation: val})),
+  setNotificationsEnabled: val => set(() => ({notificationsEnabled: val})),
   setAuthCurrentUser: val => set(() => ({authCurrentUser: val})),
   setCurrentUserInfo: val => set(() => ({currentUserInfo: val})),
   setCurrentGroupInfo: val => set(() => ({currentGroupInfo: val})),
@@ -74,6 +78,8 @@ const useStore = create<Store>(set => ({
 }));
 
 export const useConfirmation = () => useStore(state => state.confirmation);
+export const useNotificationsEnabled = () =>
+  useStore(state => state.notificationsEnabled);
 export const useAuthCurrentUser = () =>
   useStore(state => state.authCurrentUser);
 export const useCurrentUserInfo = () =>
@@ -91,6 +97,8 @@ export const useCurrentGameState = () =>
 
 export const useSetConfirmation = () =>
   useStore(state => state.setConfirmation);
+export const useSetNotificationsEnabled = () =>
+  useStore(state => state.setNotificationsEnabled);
 export const useSetAuthCurrentUser = () =>
   useStore(state => state.setAuthCurrentUser);
 export const useSetCurrentUserInfo = () =>
