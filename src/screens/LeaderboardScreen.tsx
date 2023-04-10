@@ -163,14 +163,11 @@ const Leaderboard = ({currentGroupInfo, currentUserInfo}: any) => {
   const currentGameState = useCurrentGameState();
   const {currentGroupUserInfos} = useCurrentGroupObjects();
 
-  const [leaderboardStats, setLeaderboardStats] = useState<
-    UserLeaderboardInfo[] | null
-  >(null);
+  const [leaderboardStats, setLeaderboardStats] =
+    useState<UserLeaderboardInfo[] | null >(null);
   const [refreshing, setRefreshing] = useState(true);
 
   const loadLeaderboardData = useCallback(() => {
-    console.log('Hello');
-
     // given a map of uid to the number of votes, returns a list of winners for that day
     const getWinners = (dailyStats: Map<string, number>) => {
       return Array.from(dailyStats.keys()).filter(uid => {
@@ -370,26 +367,22 @@ const Leaderboard = ({currentGroupInfo, currentUserInfo}: any) => {
             {merge: true},
           );
         }
-
         setLeaderboardStats(formatData(overallStats));
-
-        // if (overallStats && overallStats.size > 0) {
-        //   setLeaderboardStats(formatData(overallStats));
-        // } else {
-        //   // check needed in case user leaves a group
-        //   setLeaderboardStats(initialLeaderboard);
-        // }
-
         setRefreshing(false);
       }
     };
 
     fetchData().catch(console.error);
-  }, [currentGroupInfo, currentGameState, currentGroupUserInfos]);
+  }, [
+    currentGroupInfo,
+    currentGameState,
+    currentGroupUserInfos,
+  ]);
 
   useEffect(() => {
     loadLeaderboardData();
   }, [loadLeaderboardData]);
+
 
   return (
     <View className="flex-1 bg-white">
