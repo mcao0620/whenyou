@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback, useMemo} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import {
   View,
   Text,
@@ -8,7 +8,6 @@ import {
 } from 'react-native';
 import FastImage from 'react-native-fast-image';
 import {
-  useAuthCurrentUser,
   useCurrentGameState,
   useCurrentGroupObjects,
   useCurrentUserInfo,
@@ -163,8 +162,9 @@ const Leaderboard = ({currentGroupInfo, currentUserInfo}: any) => {
   const currentGameState = useCurrentGameState();
   const {currentGroupUserInfos} = useCurrentGroupObjects();
 
-  const [leaderboardStats, setLeaderboardStats] =
-    useState<UserLeaderboardInfo[] | null >(null);
+  const [leaderboardStats, setLeaderboardStats] = useState<
+    UserLeaderboardInfo[] | null
+  >(null);
   const [refreshing, setRefreshing] = useState(true);
 
   const loadLeaderboardData = useCallback(() => {
@@ -373,16 +373,11 @@ const Leaderboard = ({currentGroupInfo, currentUserInfo}: any) => {
     };
 
     fetchData().catch(console.error);
-  }, [
-    currentGroupInfo,
-    currentGameState,
-    currentGroupUserInfos,
-  ]);
+  }, [currentGroupInfo, currentGameState, currentGroupUserInfos]);
 
   useEffect(() => {
     loadLeaderboardData();
   }, [loadLeaderboardData]);
-
 
   return (
     <View className="flex-1 bg-white">
