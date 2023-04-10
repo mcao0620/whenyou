@@ -8,7 +8,6 @@ import {
 } from 'react-native';
 import FastImage from 'react-native-fast-image';
 import {
-  useAuthCurrentUser,
   useCurrentGameState,
   useCurrentGroupObjects,
   useCurrentUserInfo,
@@ -162,24 +161,11 @@ const Leaderboard = ({currentGroupInfo, currentUserInfo}: any) => {
 
   const currentGameState = useCurrentGameState();
   const {currentGroupUserInfos} = useCurrentGroupObjects();
-  const authCurrentUserUID = useAuthCurrentUser()?.uid;
 
-  const initialLeaderboard = Array.from(currentGroupUserInfos.keys()).map(
-    (uid: any) => {
-      return {
-        uid: uid,
-        username: currentGroupUserInfos.get(uid)?.username,
-        profilePicUrl: currentGroupUserInfos.get(uid)?.profilePicUrl,
-        totalPoints: 0,
-        numGamesWon: 0,
-      } as UserLeaderboardInfo;
-    },
-  );
-
-  const [leaderboardStats, setLeaderboardStats] =
-    useState<UserLeaderboardInfo[]>(initialLeaderboard);
+  const [leaderboardStats, setLeaderboardStats] = useState<
+    UserLeaderboardInfo[] | null
+  >(null);
   const [refreshing, setRefreshing] = useState(true);
-  const [showLoading, setShowLoading] = useState(true);
 
   const loadLeaderboardData = useCallback(() => {
     // given a map of uid to the number of votes, returns a list of winners for that day
@@ -381,41 +367,22 @@ const Leaderboard = ({currentGroupInfo, currentUserInfo}: any) => {
             {merge: true},
           );
         }
-
-        if (overallStats && overallStats.size > 0) {
-          setLeaderboardStats(formatData(overallStats));
-        } else {
-          // check needed in case user leaves a group
-          setLeaderboardStats(initialLeaderboard);
-        }
-
+        setLeaderboardStats(formatData(overallStats));
         setRefreshing(false);
       }
     };
 
     fetchData().catch(console.error);
-    setShowLoading(false);
-  }, [
-    currentGroupInfo,
-    currentGameState,
-    currentGroupUserInfos,
-    initialLeaderboard,
-  ]);
+  }, [currentGroupInfo, currentGameState, currentGroupUserInfos]);
 
   useEffect(() => {
     loadLeaderboardData();
   }, [loadLeaderboardData]);
 
-  useEffect(() => {
-    setShowLoading(true);
-  }, []);
-
   return (
     <View className="flex-1 bg-white">
       {/* Show loading icon while data is fetching, or user is not in the current leaderboard data*/}
-      {showLoading ||
-      leaderboardStats.filter(obj => obj.uid === authCurrentUserUID).length ===
-        0 ? (
+      {leaderboardStats === null ? (
         <ActivityIndicator size="large" className="absolute inset-2/4 z-10" />
       ) : (
         <>
